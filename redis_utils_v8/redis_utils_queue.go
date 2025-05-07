@@ -17,37 +17,39 @@ type RedisQueueUtils struct {
 }
 
 /*
+创建一个Queue操作工具类, 不限制队列的大小
+
+  - paramCli
+  - paramQueueKey 队列的key
+  - paramExpire 超时时间，<=0 时表示没有超时， 单位秒
+  - paramAutoExpire 是否在更新后自动更新超时时间
+*/
+func CreateQueueUtils(paramCli *redis.Client, paramQueueKey string, paramExpire int32, paramAutoExpire bool) *RedisQueueUtils {
+	return &RedisQueueUtils{
+		key:         paramQueueKey,
+		cli:         paramCli,
+		expire:      paramExpire,
+		auto_expire: paramAutoExpire,
+		max_size:    0,
+	}
+}
+
+/*
 创建一个Queue操作工具类
 
   - paramCli
   - paramQueueKey 队列的key
   - paramExpire 超时时间，<=0 时表示没有超时， 单位秒
+  - paramAutoExpire 是否在更新后自动更新超时时间
+  - paramMaxSize 队列最大长度 0表示不限制
 */
-func CreateRedisQueueUtils(paramCli *redis.Client, paramQueueKey string, paramExpire int32) *RedisQueueUtils {
+func CreateQueueUtilsMax(paramCli *redis.Client, paramQueueKey string, paramExpire int32, paramAutoExpire bool, paramMaxSize int64) *RedisQueueUtils {
 	return &RedisQueueUtils{
 		key:         paramQueueKey,
 		cli:         paramCli,
 		expire:      paramExpire,
-		auto_expire: true,
-		max_size:    0,
-	}
-}
-func CreateRedisQueueUtilsMax(paramCli *redis.Client, paramQueueKey string, paramExpire int32, paramMaxSize int64) *RedisQueueUtils {
-	return &RedisQueueUtils{
-		key:         paramQueueKey,
-		cli:         paramCli,
-		expire:      paramExpire,
-		auto_expire: true,
+		auto_expire: paramAutoExpire,
 		max_size:    paramMaxSize,
-	}
-}
-
-// 计算超时时间
-func (m *RedisQueueUtils) calcExpire() time.Duration {
-	if m.expire <= 0 {
-		return -1
-	} else {
-		return time.Duration(m.expire) * time.Second
 	}
 }
 

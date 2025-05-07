@@ -15,15 +15,6 @@ type RedisListUtils struct {
 	auto_expire bool  // 是否自动更新超期时间  否则手动更新，默认自动更新
 }
 
-// 计算超时时间
-func (m *RedisListUtils) calcExpire() time.Duration {
-	if m.expire <= 0 {
-		return -1
-	} else {
-		return time.Duration(m.expire) * time.Second
-	}
-}
-
 // 设置字段更新超时标志
 func (m *RedisListUtils) SetAutoExpire(paramValue bool) {
 	m.auto_expire = paramValue
@@ -32,10 +23,12 @@ func (m *RedisListUtils) SetAutoExpire(paramValue bool) {
 // 设置超时 -1表示设为不过期
 func (m *RedisListUtils) ExpireSecond(ctx context.Context, paramSeconds int) {
 	if paramSeconds < 0 {
+		paramSeconds = -1
 		m.cli.Persist(ctx, m.key)
 	} else {
 		m.cli.Expire(ctx, m.key, time.Duration(paramSeconds)*time.Second)
 	}
+	m.expire = int32(paramSeconds)
 }
 
 // 取队列的数量
@@ -135,12 +128,13 @@ func (m *RedisListUtils) Range(ctx context.Context, paramStart int64, paramEnd i
   - paramCli
   - paramListKey 列表的key
   - paramExpire 超时时间，<=0 时表示没有超时， 单位秒
+  - paramAutoExpire 是否在更新后自动更新超时时间
 */
-func CreateRedisListUtils(paramCli *redis.Client, paramListKey string, paramExpire int32) *RedisListUtils {
+func CreateListUtils(paramCli *redis.Client, paramListKey string, paramExpire int32, paramAutoExpire bool) *RedisListUtils {
 	return &RedisListUtils{
 		key:         paramListKey,
 		cli:         paramCli,
 		expire:      paramExpire,
-		auto_expire: true,
+		auto_expire: paramAutoExpire,
 	}
 }

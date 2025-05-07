@@ -1,52 +1,38 @@
 package dec
 
 import (
+	"reflect"
+
 	"github.com/shopspring/decimal"
 )
 
 // 将数据类型转换为decimal.Decimal类型
 // 支持：int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, string, decimal.Decimal
 // 其他类型返回 decimal.Decimal(0)
-func D[T any](value T) decimal.Decimal {
-	switch v := any(value).(type) {
-	case int:
-		return decimal.NewFromInt(int64(v))
-	case int8:
-		return decimal.NewFromInt(int64(v))
-	case int16:
-		return decimal.NewFromInt(int64(v))
-	case int32:
-		return decimal.NewFromInt32(v)
-	case int64:
-		return decimal.NewFromInt(v)
-	case uint:
-		return decimal.NewFromUint64(uint64(v))
-	case uint8:
-		return decimal.NewFromUint64(uint64(v))
-	case uint16:
-		return decimal.NewFromUint64(uint64(v))
-	case uint32:
-		return decimal.NewFromUint64(uint64(v))
-	case uint64:
-		return decimal.NewFromUint64(v)
+func D(value interface{}) decimal.Decimal {
+	switch v := value.(type) {
+	case int, int8, int16, int32, int64:
+		return decimal.NewFromInt(reflect.ValueOf(v).Int())
+	case uint, uint8, uint16, uint32, uint64:
+		return decimal.NewFromUint64(reflect.ValueOf(v).Uint())
 	case float32:
 		return decimal.NewFromFloat32(v)
 	case float64:
 		return decimal.NewFromFloat(v)
 	case string:
 		if v == "" {
-			return decimal.NewFromInt(0)
+			return decimal.Zero
 		}
 		r, err := decimal.NewFromString(v)
 		if err != nil {
-			return decimal.NewFromInt(0)
+			return decimal.Zero
 		} else {
 			return r
 		}
 	case decimal.Decimal:
 		return v
 	default:
-		return decimal.NewFromInt(0)
+		return decimal.Zero
 	}
 }
 

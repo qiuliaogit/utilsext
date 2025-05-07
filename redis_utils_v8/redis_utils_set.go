@@ -9,9 +9,10 @@ import (
 
 // 基于Redis的Set工具类
 type RedisSetUtils struct {
-	key    string
-	cli    *redis.Client
-	expire int32 // 超时时间 单位秒
+	key         string
+	cli         *redis.Client
+	expire      int32 // 超时时间 单位秒
+	auto_expire bool  // 是否自动更新超期时间  否则手动更新，默认自动更新
 }
 
 /*
@@ -20,12 +21,14 @@ type RedisSetUtils struct {
   - paramCli
   - paramKey 集合的key
   - paramExpire 超时时间，<=0 时表示没有超时， 单位秒
+  - paramAutoExpire 是否自动更新超时时间
 */
-func CreateRedisSetUtils(paramCli *redis.Client, paramKey string, paramExpire int32) *RedisSetUtils {
+func CreateSetUtils(paramCli *redis.Client, paramKey string, paramExpire int32, paramAutoExpire bool) *RedisSetUtils {
 	return &RedisSetUtils{
-		key:    paramKey,
-		cli:    paramCli,
-		expire: paramExpire,
+		key:         paramKey,
+		cli:         paramCli,
+		expire:      paramExpire,
+		auto_expire: paramAutoExpire,
 	}
 }
 
@@ -48,30 +51,23 @@ func (u *RedisSetUtils) GetExpire() int32 {
 	return u.expire
 }
 
+func (u *RedisSetUtils) afterExpire(ctx context.Context, paramErr error) {
+	if paramErr == nil && u.auto_expire && u.expire > 0 {
+		u.cli.Expire(ctx, u.key, time.Duration(u.expire)*time.Second)
+	}
+}
+
 // 增加一个元素
 func (u *RedisSetUtils) Add(paramCtx context.Context, paramValue ...interface{}) (int64, error) {
 	ret := u.cli.SAdd(paramCtx, u.key, paramValue...)
-	if ret.Val() > 0 {
-		exp := u.calcExpire()
-		if exp > 0 {
-			_ = u.cli.Expire(paramCtx, u.key, exp)
-		}
-	}
+	u.afterExpire(paramCtx, ret.Err())
 	return ret.Result()
 }
 
 // 删除一个元素
 func (u *RedisSetUtils) Del(paramCtx context.Context, paramValue ...interface{}) (int64, error) {
 	ret := u.cli.SRem(paramCtx, u.key, paramValue...)
-	if ret.Val() > 0 {
-		exp := u.calcExpire()
-		if exp > 0 {
-			cnt, _ := u.Count(paramCtx)
-			if cnt > 0 {
-				_ = u.cli.Expire(paramCtx, u.key, exp)
-			}
-		}
-	}
+	u.afterExpire(paramCtx, ret.Err())
 	return ret.Result()
 }
 
@@ -99,11 +95,11 @@ func (u *RedisSetUtils) List(paramCtx context.Context) ([]string, error) {
 	return ret.Result()
 }
 
-// // 设置超时 -1表示设为不过期
-// func (this *RedisSetUtils) ExpireSecond(ctx context.Context, paramSeconds int) {
-// 	if paramSeconds < 0 {
-// 		this.cli.Persist(ctx, this.key)
-// 	} else {
-// 		this.cli.Expire(ctx, this.key, time.Duration(paramSeconds)*time.Second)
-// 	}
-// }
+// 设置超时 -1表示设为不过期
+func (u *RedisSetUtils) ExpireSecond(ctx context.Context, paramSeconds int) {
+	if paramSeconds < 0 {
+		u.cli.Persist(ctx, u.key)
+	} else {
+		u.cli.Expire(ctx, u.key, time.Duration(paramSeconds)*time.Second)
+	}
+}

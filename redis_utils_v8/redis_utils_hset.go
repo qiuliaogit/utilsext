@@ -21,22 +21,14 @@ type RedisHSetUtils struct {
   - paramCli
   - paramHSetKey 集合的key
   - paramExpire 超时时间，<=0 时表示没有超时， 单位秒
+  - paramAutoExpire 是否在更新后自动更新超时时间
 */
-func CreateRedisHSetUtils(paramCli *redis.Client, paramHSetKey string, paramExpire int32) *RedisHSetUtils {
+func CreateHSetUtils(paramCli *redis.Client, paramHSetKey string, paramExpire int32, paramAutoExpire bool) *RedisHSetUtils {
 	return &RedisHSetUtils{
 		HSetKey:     paramHSetKey,
 		cli:         paramCli,
 		expire:      paramExpire,
-		auto_expire: true,
-	}
-}
-
-// 计算超时时间
-func (m *RedisHSetUtils) calcExpire() time.Duration {
-	if m.expire <= 0 {
-		return -1
-	} else {
-		return time.Duration(m.expire) * time.Second
+		auto_expire: paramAutoExpire,
 	}
 }
 

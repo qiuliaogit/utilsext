@@ -27,22 +27,14 @@ type RedisZSetUtils struct {
   - paramCli
   - paramKey 集合的key
   - paramExpire 超时时间，<=0 时表示没有超时， 单位秒
+  - paramAutoExpire 是否在更新后自动更新超时时间
 */
-func CreateRedisZSetUtils(paramCli *redis.Client, paramKey string, paramExpire int32) *RedisZSetUtils {
+func CreateZSetUtils(paramCli *redis.Client, paramKey string, paramExpire int32, paramAutoExpire bool) *RedisZSetUtils {
 	return &RedisZSetUtils{
 		key:         paramKey,
 		cli:         paramCli,
 		expire:      paramExpire,
-		auto_expire: false,
-	}
-}
-
-// 计算超时时间
-func (m *RedisZSetUtils) calcExpire() time.Duration {
-	if m.expire <= 0 {
-		return -1
-	} else {
-		return time.Duration(m.expire) * time.Second
+		auto_expire: paramAutoExpire,
 	}
 }
 
@@ -95,13 +87,13 @@ func (m *RedisZSetUtils) CountByIntMaxScore(ctx context.Context, paramMaxScore i
 }
 
 // 清除分数
-func (m *RedisZSetUtils) ZeroScore(ctx context.Context) *commonutils.BaseRet {
-	r := commonutils.NewBaseRet()
+func (m *RedisZSetUtils) ZeroScore(ctx context.Context) error {
+	var r error
 
 	for range [1]int{} {
 		list, err := m.MemberListByMinScore(ctx, 0, false).Result()
 		if err != nil && err != redis.Nil {
-			r.SetError(commonutils.ERR_FAIL, "获取分数大于0的成员列表失败："+m.key+" err:"+err.Error())
+			r = commonutils.NewError(commonutils.ERR_FAIL, "获取分数大于0的成员列表失败："+m.key+" err:"+err.Error())
 			break
 		}
 		if len(list) == 0 {
@@ -114,19 +106,19 @@ func (m *RedisZSetUtils) ZeroScore(ctx context.Context) *commonutils.BaseRet {
 			if len(updateList) >= 500 {
 				err = m.cli.ZAdd(ctx, m.key, updateList...).Err()
 				if err != nil {
-					r.SetError(commonutils.ERR_FAIL, "更新分数失败："+m.key+" err:"+err.Error())
+					r = commonutils.NewError(commonutils.ERR_FAIL, "更新分数失败："+m.key+" err:"+err.Error())
 					break
 				}
 				updateList = make([]*redis.Z, 0, 500)
 			}
 		}
-		if r.IsNotOK() {
+		if r != nil {
 			break
 		}
 		if len(updateList) > 0 {
 			err := m.cli.ZAdd(ctx, m.key, updateList...).Err()
 			if err != nil {
-				r.SetError(commonutils.ERR_FAIL, "更新分数失败："+m.key+" err:"+err.Error())
+				r = commonutils.NewError(commonutils.ERR_FAIL, "更新分数失败："+m.key+" err:"+err.Error())
 				break
 			}
 		}
