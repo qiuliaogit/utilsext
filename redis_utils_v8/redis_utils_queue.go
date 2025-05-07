@@ -1,4 +1,4 @@
-package redisutils
+package redisv8
 
 import (
 	"context"
