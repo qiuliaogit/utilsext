@@ -1,4 +1,4 @@
-module redisv8
+module github.com/qiuliaogit/utilsext/redisv8
 
 go 1.22.12
 

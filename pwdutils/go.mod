@@ -1,4 +1,4 @@
-module pwdutils
+module github.com/qiuliaogit/utilsextpwdutils
 
 go 1.22.12
 
