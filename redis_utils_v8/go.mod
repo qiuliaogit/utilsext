@@ -1,14 +1,10 @@
-module utilsext
+module redisv8
 
-go 1.23.0
-
-toolchain go1.23.9
+go 1.23.9
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/qiuliaogit/commonutils v1.0.24
-	github.com/shopspring/decimal v1.4.0
-	golang.org/x/crypto v0.38.0
 )
 
 require (
